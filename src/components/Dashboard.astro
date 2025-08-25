@@ -1,0 +1,754 @@
+---
+// No props needed for this component
+---
+
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h2 class="dashboard-title">Dashboard de Solicitudes</h2>
+    <p class="dashboard-subtitle">Gestión y seguimiento de solicitudes de desarrollo</p>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section card">
+    <h3 class="filters-title">Filtros</h3>
+    <div class="filters-grid">
+      <div class="form-group">
+        <label class="form-label" for="search">Búsqueda general</label>
+        <input 
+          type="text" 
+          id="search" 
+          class="form-input" 
+          placeholder="Buscar por DevID, solicitante, producto..."
+        />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="country">País</label>
+        <input 
+          type="text" 
+          id="country" 
+          class="form-input" 
+          placeholder="Filtrar por país"
+        />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="product">Producto</label>
+        <input 
+          type="text" 
+          id="product" 
+          class="form-input" 
+          placeholder="Filtrar por producto"
+        />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="adminApproval">Aprobación de Admin</label>
+                            <select id="adminApproval" class="form-input">
+          <option value="">Todos</option>
+          <option value="Aprobado">Aprobado</option>
+          <option value="Pendiente">Pendiente</option>
+          <option value="Rechazado">Rechazado</option>
+        </select>
+      </div>
+    </div>
+    <div class="filters-actions">
+      <button class="btn btn-primary" id="applyFilters">Aplicar Filtros</button>
+      <button class="btn btn-secondary" id="clearFilters">Limpiar</button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div id="loading" class="loading-container" style="display: none;">
+    <div class="loading"></div>
+    <p>Cargando solicitudes...</p>
+  </div>
+
+  <!-- Error State -->
+  <div id="error" class="error-container" style="display: none;">
+    <p class="error-message">Error al cargar las solicitudes. Por favor, intenta de nuevo.</p>
+    <button class="btn btn-primary" id="retryBtn">Reintentar</button>
+  </div>
+
+  <!-- Table Section -->
+  <div class="table-section">
+    <div class="table-container">
+      <table class="table" id="requestsTable">
+        <thead>
+          <tr>
+            <th>DevID</th>
+            <th>Fecha de Solicitud</th>
+            <th>Solicitante</th>
+            <th>País</th>
+            <th>Producto</th>
+            <th>Tipo de Plan</th>
+            <th>Aprobación de Admin</th>
+            <th>Jira Task</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- Data will be populated by JavaScript -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination-section" id="pagination" style="display: none;">
+    <div class="pagination-info">
+      <span id="paginationInfo">Mostrando 0 de 0 resultados</span>
+    </div>
+    <div class="pagination-controls">
+      <button class="btn btn-secondary" id="prevPage" disabled>Anterior</button>
+      <span class="pagination-pages" id="pageNumbers"></span>
+      <button class="btn btn-secondary" id="nextPage" disabled>Siguiente</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .dashboard-container {
+    padding-top: 6rem;
+  }
+
+  .dashboard-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .dashboard-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: white !important;
+    background-clip: text;
+    margin-bottom: 0.5rem;
+  }
+
+  .dashboard-subtitle {
+    font-size: 1.2rem;
+    color: white;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .filters-section {
+    margin-bottom: 2rem;
+  }
+
+  .filters-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+  }
+
+  .filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .filters-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+  }
+
+  .btn-secondary {
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+  }
+
+  .btn-secondary:hover {
+    background: var(--primary-color);
+    color: var(--text-light);
+    transform: translateY(-2px);
+  }
+
+  .loading-container {
+    text-align: center;
+    padding: 3rem;
+  }
+
+  .loading-container p {
+    margin-top: 1rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .error-container {
+    text-align: center;
+    padding: 3rem;
+  }
+
+  .error-message {
+    color: #dc2626;
+    font-weight: 500;
+    margin-bottom: 1rem;
+  }
+
+  .table-section {
+    margin-bottom: 2rem;
+  }
+
+  .pagination-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.1);
+  }
+
+  .pagination-info {
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .pagination-pages {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .page-btn {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    background: white;
+    color: var(--text-primary);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+  }
+
+  .page-btn:hover {
+    background: var(--primary-light);
+    color: white;
+  }
+
+  .page-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+  }
+
+  .dev-id {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    background: rgba(139, 92, 246, 0.1);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .jira-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+  }
+
+  .jira-link:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
+  }
+
+  /* Admin Approval Select Styles */
+    .admin-approval-select {
+    padding: 0.5rem;
+    border: 2px solid var(--primary-color);
+    border-radius: 8px;
+    background: white;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 120px;
+  }
+
+  .admin-approval-select:hover {
+    background: rgba(139, 92, 246, 0.05);
+    border-color: var(--primary-hover);
+  }
+
+  .admin-approval-select:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+  }
+
+  .admin-approval-select option {
+    padding: 0.5rem;
+    font-weight: 600;
+  }
+
+  .admin-approval-select option[value="Aprobado"] {
+    color: #059669;
+  }
+
+  .admin-approval-select option[value="Rechazado"] {
+    color: #dc2626;
+  }
+
+  .admin-approval-select option[value="Pendiente"] {
+    color: #d97706;
+  }
+
+  @media (max-width: 768px) {
+    .dashboard-title {
+      font-size: 2rem;
+    }
+
+    .filters-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .filters-actions {
+      justify-content: stretch;
+    }
+
+    .filters-actions .btn {
+      flex: 1;
+    }
+
+    .pagination-section {
+      flex-direction: column;
+      gap: 1rem;
+    }
+  }
+</style>
+
+<script>
+  interface RequestData {
+    devId: string;
+    createdAt: string;
+    requesterName: string;
+    adminApproval: string;
+    country: string;
+    product: string;
+    planType: string;
+    jiraTaskUrl: string;
+    _id: string;
+  }
+
+  interface ApiResponse {
+    success: boolean;
+    data: RequestData[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+    error?: string;
+  }
+
+  let currentPage = 1;
+  let currentFilters = {
+    search: '',
+    country: '',
+    product: '',
+    adminApproval: ''
+  };
+
+  // DOM Elements
+  const loadingEl = document.getElementById('loading')!;
+  const errorEl = document.getElementById('error')!;
+  const tableBodyEl = document.getElementById('tableBody')!;
+  const paginationEl = document.getElementById('pagination')!;
+  const paginationInfoEl = document.getElementById('paginationInfo')!;
+  const pageNumbersEl = document.getElementById('pageNumbers')!;
+  const prevPageBtn = document.getElementById('prevPage')! as HTMLButtonElement;
+  const nextPageBtn = document.getElementById('nextPage')! as HTMLButtonElement;
+  const retryBtn = document.getElementById('retryBtn')!;
+
+  // Filter elements
+  const searchInput = document.getElementById('search')! as HTMLInputElement;
+  const countryInput = document.getElementById('country')! as HTMLInputElement;
+  const productInput = document.getElementById('product')! as HTMLInputElement;
+  const adminApprovalSelect = document.getElementById('adminApproval')! as HTMLSelectElement;
+  const applyFiltersBtn = document.getElementById('applyFilters')!;
+  const clearFiltersBtn = document.getElementById('clearFilters')!;
+
+  async function fetchRequests(page: number = 1) {
+    try {
+      showLoading();
+      
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: '10',
+        ...currentFilters
+      });
+      
+      const response = await fetch(`/api/requests?${params}`);
+      const data: ApiResponse = await response.json();
+      
+      if (data.success) {
+        renderTable(data.data);
+        renderPagination(data.pagination);
+        hideLoading();
+      } else {
+        showError();
+      }
+    } catch (error) {
+      console.error('Error fetching requests:', error);
+      showError();
+    }
+  }
+
+  function renderTable(requests: RequestData[]) {
+    if (requests.length === 0) {
+      tableBodyEl.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+            No se encontraron solicitudes
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tableBodyEl.innerHTML = requests.map(request => {
+      const date = new Date(request.createdAt).toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      
+      const statusClass = getStatusClass(request.adminApproval);
+      
+      return `
+        <tr>
+          <td><span class="dev-id">${request.devId}</span></td>
+          <td>${date}</td>
+          <td>${request.requesterName}</td>
+          <td>${request.country}</td>
+          <td>${request.product}</td>
+          <td>${request.planType}</td>
+          <td>
+            <!-- Versión estática (por defecto) -->
+            <span class="static-approval status-badge status-${(request.adminApproval || 'Pendiente').toLowerCase().replace(' ', '-')}" style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; ${getStatusStyles(request.adminApproval || 'Pendiente')}">${request.adminApproval || 'Pendiente'}</span>
+                        <!-- Versión dropdown (solo visible en modo Admin) -->
+                        <select class="admin-approval-select" data-request-id="${request._id}" data-current-status="${request.adminApproval || 'Pendiente'}" style="display: none;">
+                            <option value="Pendiente" ${(request.adminApproval || 'Pendiente') === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+                            <option value="Aprobado" ${request.adminApproval === 'Aprobado' ? 'selected' : ''}>Aprobado</option>
+                            <option value="Rechazado" ${request.adminApproval === 'Rechazado' ? 'selected' : ''}>Rechazado</option>
+            </select>
+          </td>
+          <td>
+            ${request.jiraTaskUrl ? 
+              `<a href="${request.jiraTaskUrl}" target="_blank" class="jira-link">Ver Task</a>` : 
+              '<span style="color: var(--text-secondary);">N/A</span>'
+            }
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    // No llamar setupAdminMode aquí, se llama en DOMContentLoaded
+  }
+
+  function getStatusClass(status: string): string {
+    const statusLower = status.toLowerCase();
+    if (statusLower.includes('aprobado') || statusLower.includes('approved')) {
+      return 'status-approved';
+    } else if (statusLower.includes('rechazado') || statusLower.includes('rejected')) {
+      return 'status-rejected';
+    } else {
+      return 'status-pending';
+    }
+  }
+
+  function getStatusStyles(status: string): string {
+    const statusLower = status.toLowerCase();
+    if (statusLower.includes('aprobado') || statusLower.includes('approved')) {
+      return 'background-color: #dcfce7; color: #166534;';
+    } else if (statusLower.includes('rechazado') || statusLower.includes('rejected')) {
+      return 'background-color: #fef2f2; color: #dc2626;';
+    } else {
+      return 'background-color: #fef3c7; color: #d97706;';
+    }
+  }
+
+  function renderPagination(pagination: any) {
+    const { page, total, totalPages } = pagination;
+    
+    paginationInfoEl.textContent = `Mostrando ${((page - 1) * 10) + 1}-${Math.min(page * 10, total)} de ${total} resultados`;
+    
+    prevPageBtn.disabled = page <= 1;
+    nextPageBtn.disabled = page >= totalPages;
+    
+    // Render page numbers
+    const pageNumbers = [];
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, page - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pageNumbers.push(`
+        <button class="page-btn ${i === page ? 'active' : ''}" data-page="${i}">
+          ${i}
+        </button>
+      `);
+    }
+    
+    pageNumbersEl.innerHTML = pageNumbers.join('');
+    
+    // Add event listeners to page buttons
+    pageNumbersEl.querySelectorAll('.page-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const target = e.target as HTMLButtonElement;
+        const page = parseInt(target.dataset.page!);
+        currentPage = page;
+        fetchRequests(page);
+      });
+    });
+    
+    paginationEl.style.display = 'flex';
+  }
+
+  function showLoading() {
+    loadingEl.style.display = 'block';
+    errorEl.style.display = 'none';
+    paginationEl.style.display = 'none';
+  }
+
+  function hideLoading() {
+    loadingEl.style.display = 'none';
+  }
+
+  function showError() {
+    loadingEl.style.display = 'none';
+    errorEl.style.display = 'block';
+    paginationEl.style.display = 'none';
+  }
+
+  function applyFilters() {
+    currentFilters = {
+      search: searchInput.value.trim(),
+      country: countryInput.value.trim(),
+      product: productInput.value.trim(),
+      adminApproval: adminApprovalSelect.value
+    };
+    currentPage = 1;
+    fetchRequests(1);
+  }
+
+  function clearFilters() {
+    searchInput.value = '';
+    countryInput.value = '';
+    productInput.value = '';
+    adminApprovalSelect.value = '';
+    currentFilters = {
+      search: '',
+      country: '',
+      product: '',
+      adminApproval: ''
+    };
+    currentPage = 1;
+    fetchRequests(1);
+  }
+
+  // Función para manejar cambios de estado de aprobación (solo para Admin)
+  async function handleApprovalChange(selectElement: HTMLSelectElement) {
+    console.log('handleApprovalChange called:', {
+      element: selectElement,
+      requestId: selectElement.dataset.requestId,
+      currentStatus: selectElement.dataset.currentStatus,
+      newValue: selectElement.value,
+      adminToken: window.adminToken
+    });
+    
+    const requestId = selectElement.dataset.requestId;
+    const currentStatus = selectElement.dataset.currentStatus;
+    const newStatus = selectElement.value;
+    
+    if (newStatus === currentStatus) {
+      console.log('No change detected, returning');
+      return; // No hay cambio
+    }
+
+    // Confirmar el cambio
+    const confirmed = confirm(`¿Estás seguro de cambiar el estado de "${currentStatus}" a "${newStatus}"?`);
+    if (!confirmed) {
+      selectElement.value = currentStatus; // Revertir selección
+      return;
+    }
+
+    try {
+      // Deshabilitar el select mientras se procesa
+      selectElement.disabled = true;
+      selectElement.style.opacity = '0.6';
+
+      console.log('Sending API request with data:', {
+        token: window.adminToken,
+        requestId: requestId,
+        newStatus: newStatus
+      });
+      
+      const response = await fetch('/api/update-approval', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          requestId,
+          newStatus,
+          token: window.adminToken
+        })
+      });
+
+      console.log('API response status:', response.status);
+      const result = await response.json();
+      console.log('API response data:', result);
+
+      if (result.success) {
+        console.log('Update successful, updating UI');
+        // Actualizar el dataset con el nuevo estado
+        selectElement.dataset.currentStatus = newStatus;
+        
+        // Mostrar mensaje de éxito
+        alert(`Estado actualizado exitosamente a: ${newStatus}`);
+        
+        // Recargar la tabla para reflejar los cambios
+        fetchRequests(currentPage);
+      } else {
+        console.error('API error:', result);
+        alert(`Error: ${result.error}`);
+        selectElement.value = currentStatus; // Revertir selección
+      }
+    } catch (error) {
+      console.error('Error in handleApprovalChange:', error);
+      alert('Error al actualizar el estado. Por favor, intenta de nuevo.');
+      selectElement.value = currentStatus; // Revertir selección
+    } finally {
+      // Rehabilitar el select
+      selectElement.disabled = false;
+      selectElement.style.opacity = '1';
+    }
+  }
+
+  // Event listeners
+  applyFiltersBtn.addEventListener('click', applyFilters);
+  clearFiltersBtn.addEventListener('click', clearFilters);
+  retryBtn.addEventListener('click', () => fetchRequests(currentPage));
+  
+  prevPageBtn.addEventListener('click', () => {
+    if (currentPage > 1) {
+      currentPage--;
+      fetchRequests(currentPage);
+    }
+  });
+  
+  nextPageBtn.addEventListener('click', () => {
+    currentPage++;
+    fetchRequests(currentPage);
+  });
+
+  // Envolver todo en DOMContentLoaded
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, setting up event listeners');
+      
+      // Event listeners
+      applyFiltersBtn.addEventListener('click', applyFilters);
+      clearFiltersBtn.addEventListener('click', clearFilters);
+      retryBtn.addEventListener('click', () => fetchRequests(currentPage));
+      
+      prevPageBtn.addEventListener('click', () => {
+        if (currentPage > 1) {
+          currentPage--;
+          fetchRequests(currentPage);
+        }
+      });
+      
+      nextPageBtn.addEventListener('click', () => {
+        currentPage++;
+        fetchRequests(currentPage);
+      });
+
+      // Enter key support for filters
+      [searchInput, countryInput, productInput].forEach(input => {
+        input.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            applyFilters();
+          }
+        });
+      });
+
+      // Initial load
+      fetchRequests(1);
+      
+      // Configurar modo Admin después de cargar los datos
+        setTimeout(() => {
+          setupAdminMode();
+        }, 500);
+    });
+
+  // Función para configurar el modo Admin
+  function setupAdminMode() {
+    // Verificar si estamos en la página Admin por la URL
+    const isAdminPage = window.location.pathname.includes('/admin/');
+    
+    if (isAdminPage) {
+      // Ocultar elementos estáticos y mostrar dropdowns
+      const staticElements = document.querySelectorAll('.static-approval');
+      const adminElements = document.querySelectorAll('.admin-approval-select');
+      
+      staticElements.forEach(el => {
+        (el as HTMLElement).style.display = 'none';
+      });
+      adminElements.forEach(el => {
+        (el as HTMLElement).style.display = 'block';
+      });
+      
+      // Agregar event listeners
+      adminElements.forEach((select, index) => {
+        select.addEventListener('change', (e) => {
+          handleApprovalChange(e.target as HTMLSelectElement);
+        });
+      });
+    }
+  }
+</script>
+
+<script is:inline>
+  // Script que se ejecuta en el cliente
+  document.addEventListener('DOMContentLoaded', () => {
+    // Verificar si estamos en la página Admin
+    const isAdminPage = window.location.pathname.includes('/admin/');
+    
+    if (isAdminPage) {
+      // Configurar modo Admin después de un delay
+      setTimeout(() => {
+        const staticElements = document.querySelectorAll('.static-approval');
+        const adminElements = document.querySelectorAll('.admin-approval-select');
+        
+        // Ocultar elementos estáticos y mostrar dropdowns
+        staticElements.forEach(el => {
+          el.style.display = 'none';
+        });
+        adminElements.forEach(el => {
+          el.style.display = 'block';
+        });
+        
+        // Agregar event listeners
+        adminElements.forEach((select) => {
+          select.addEventListener('change', (e) => {
+            // Aquí iría la lógica para actualizar la base de datos
+          });
+        });
+      }, 1000);
+    }
+  });
+</script>

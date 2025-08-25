@@ -1,0 +1,93 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Dashboard from '../../components/Dashboard.astro';
+
+const { token } = Astro.params;
+const ADMIN_TOKEN = process.env.ADMIN_APPROVAL_TOKEN || 'admin4tepuse';
+
+// Verificar si el token es válido
+const isValidToken = token === ADMIN_TOKEN;
+
+if (!isValidToken) {
+  return Astro.redirect('/404');
+}
+---
+
+<Layout title="Dashboard Admin - Gestión de Aprobaciones">
+  <div class="admin-dashboard">
+    <div class="admin-header">
+      <h1 class="admin-title">Panel de Administración</h1>
+      <p class="admin-subtitle">Gestión de aprobaciones con permisos especiales</p>
+      <div class="admin-badge">
+        <span>🔐 Acceso Autorizado</span>
+      </div>
+    </div>
+    <Dashboard />
+  </div>
+</Layout>
+
+<style>
+  .admin-dashboard {
+    position: relative;
+  }
+
+  .admin-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%);
+    border-radius: 16px;
+    margin-top: 6rem;
+    box-shadow: 0 10px 25px rgba(5, 150, 105, 0.3);
+  }
+
+  .admin-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  .admin-subtitle {
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 1rem;
+  }
+
+  .admin-badge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .admin-badge span {
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  /* Override dashboard styles for Admin version */
+  .admin-dashboard :global(.dashboard-header) {
+    display: none;
+  }
+
+  .admin-dashboard :global(.dashboard-container) {
+    padding-top: 0;
+  }
+</style>
+
+<script define:vars={{ token }}>
+  // Agregar token a la ventana global para uso en JavaScript
+  window.adminToken = token;
+  window.isAdminMode = true;
+  
+  // Debug logs
+  console.log('Admin mode initialized:', {
+    token: window.adminToken,
+    isAdminMode: window.isAdminMode
+  });
+</script>
