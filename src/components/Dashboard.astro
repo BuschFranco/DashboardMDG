@@ -260,6 +260,16 @@
     text-decoration: underline;
   }
 
+  .jira-key {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+  }
+
   /* Admin Approval Select Styles */
     .admin-approval-select {
     padding: 0.5rem;
@@ -335,6 +345,7 @@
     product: string;
     planType: string;
     jiraTaskUrl: string;
+    jiraTaskKey: string;
     _id: string;
   }
 
@@ -443,8 +454,8 @@
             </select>
           </td>
           <td>
-            ${request.jiraTaskUrl ? 
-              `<a href="${request.jiraTaskUrl}" target="_blank" class="jira-link">Ver Task</a>` : 
+            ${request.jiraTaskKey ? 
+              `<span class="jira-key">${request.jiraTaskKey}</span>` : 
               '<span style="color: var(--text-secondary);">N/A</span>'
             }
           </td>

@@ -58,6 +58,7 @@ export const GET: APIRoute = async ({ url }) => {
       product: request.product || 'N/A',
       planType: request.planType || 'N/A',
       jiraTaskUrl: request.jiraTaskUrl || '',
+      jiraTaskKey: request.jiraTaskKey || '',
       _id: request._id.toString()
     }));
     

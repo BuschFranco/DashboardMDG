@@ -82,6 +82,7 @@ export interface RequestDocument {
   devId: string;
   requesterName: string;
   jiraTaskUrl: string;
+  jiraTaskKey?: string;
   country: string;
   product: string;
   planType: string;
