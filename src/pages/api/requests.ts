@@ -9,7 +9,7 @@ export const GET: APIRoute = async ({ url }) => {
     const search = searchParams.get('search') || '';
     const country = searchParams.get('country') || '';
     const product = searchParams.get('product') || '';
-    const adminApproval = searchParams.get('adminApproval') || '';
+    const maxiApproval = searchParams.get('maxiApproval') || '';
     
     const collection = await getRequestsCollection();
     
@@ -33,8 +33,8 @@ export const GET: APIRoute = async ({ url }) => {
       filter.product = { $regex: product, $options: 'i' };
     }
     
-    if (adminApproval) {
-      filter.adminApproval = { $regex: adminApproval, $options: 'i' };
+    if (maxiApproval) {
+      filter.maxiApproval = { $regex: maxiApproval, $options: 'i' };
     }
     
     // Get total count for pagination
@@ -53,7 +53,7 @@ export const GET: APIRoute = async ({ url }) => {
       devId: request.devId || 'N/A',
       createdAt: request.createdAt || new Date(),
       requesterName: request.requesterName || 'N/A',
-      adminApproval: request.adminApproval || 'Pendiente',
+      maxiApproval: request.maxiApproval || 'Pendiente',
       country: request.country || 'N/A',
       product: request.product || 'N/A',
       planType: request.planType || 'N/A',

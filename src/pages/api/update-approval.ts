@@ -11,8 +11,8 @@ export const POST: APIRoute = async ({ request }) => {
     console.log('Extracted values:', { token: token ? '[PRESENT]' : '[MISSING]', requestId, newStatus });
     
     // Verificar token de autenticación
-    const ADMIN_TOKEN = process.env.ADMIN_APPROVAL_TOKEN || 'admin-secret-token-2024';
-    if (token !== ADMIN_TOKEN) {
+    const MAXI_TOKEN = process.env.MAXI_APPROVAL_TOKEN || 'maxi-secret-token-2024';
+    if (token !== MAXI_TOKEN) {
       console.log('Token validation failed');
       return new Response(JSON.stringify({ 
         success: false, 
@@ -74,9 +74,9 @@ export const POST: APIRoute = async ({ request }) => {
       { _id: new ObjectId(requestId) },
       { 
         $set: { 
-          adminApproval: newStatus,
+          maxiApproval: newStatus,
           updatedAt: new Date(),
-          updatedBy: 'Admin'
+          updatedBy: 'Maxi'
         } 
       }
     );

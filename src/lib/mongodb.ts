@@ -23,7 +23,7 @@ async function loadEnvIfNeeded() {
 // Get environment variables with validation
 function getEnvVars() {
   const MONGODB_URI = process.env.MONGODB_URI;
-  const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'Dashboard';
+  const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'DevRequest';
   
   console.log('Available env vars:', {
     MONGODB_URI: MONGODB_URI ? 'SET' : 'NOT SET',
