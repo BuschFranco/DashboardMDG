@@ -49,18 +49,25 @@ export const GET: APIRoute = async ({ url }) => {
       .toArray();
     
     // Transform the data to match our interface
-    const transformedRequests = requests.map((request: any) => ({
-      devId: request.devId || 'N/A',
-      createdAt: request.createdAt || new Date(),
-      requesterName: request.requesterName || 'N/A',
-      adminApproval: request.adminApproval || 'Pendiente',
-      country: request.country || 'N/A',
-      product: request.product || 'N/A',
-      planType: request.planType || 'N/A',
-      jiraTaskUrl: request.jiraTaskUrl || '',
-      jiraTaskKey: request.jiraTaskKey || '',
-      _id: request._id.toString()
-    }));
+    const transformedRequests = requests.map((request: any) => {
+      // Manejar tanto 'Modify' como 'modify' desde la base de datos
+       const modifyValue = request.Modify ?? request.modify ?? false;
+       const transformedModify = modifyValue === true || modifyValue === 'true' || modifyValue > 0;
+      
+      return {
+        devId: request.devId || 'N/A',
+        createdAt: request.createdAt || new Date(),
+        requesterName: request.requesterName || 'N/A',
+        adminApproval: request.adminApproval || 'Pendiente',
+        country: request.country || 'N/A',
+        product: request.product || 'N/A',
+        planType: request.planType || 'N/A',
+        jiraTaskUrl: request.jiraTaskUrl || '',
+        jiraTaskKey: request.jiraTaskKey || '',
+        Modify: transformedModify,
+        _id: request._id.toString()
+      };
+    });
     
     return new Response(JSON.stringify({
       success: true,

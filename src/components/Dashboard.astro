@@ -79,6 +79,7 @@
             <th>País</th>
             <th>Producto</th>
             <th>Tipo de Plan</th>
+            <th>Tipo</th>
             <th>Aprobación de Admin</th>
             <th>Jira Task</th>
           </tr>
@@ -311,6 +312,28 @@
     color: #d97706;
   }
 
+  /* Request Type Styles */
+  .request-type {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .request-type.modify {
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563eb;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+  }
+
+  .request-type.new {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+  }
+
   @media (max-width: 768px) {
     .dashboard-title {
       font-size: 2rem;
@@ -346,6 +369,7 @@
     planType: string;
     jiraTaskUrl: string;
     jiraTaskKey: string;
+    Modify: boolean;
     _id: string;
   }
 
@@ -418,7 +442,7 @@
     if (requests.length === 0) {
       tableBodyEl.innerHTML = `
         <tr>
-          <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+          <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
             No se encontraron solicitudes
           </td>
         </tr>
@@ -435,6 +459,8 @@
       
       const statusClass = getStatusClass(request.adminApproval);
       
+      const requestType = request.Modify ? 'Modify' : 'New';
+      
       return `
         <tr>
           <td><span class="dev-id">${request.devId}</span></td>
@@ -443,6 +469,9 @@
           <td>${request.country}</td>
           <td>${request.product}</td>
           <td>${request.planType}</td>
+          <td>
+            <span class="request-type ${requestType.toLowerCase()}">${requestType}</span>
+          </td>
           <td>
             <!-- Versión estática (por defecto) -->
             <span class="static-approval status-badge status-${(request.adminApproval || 'Pendiente').toLowerCase().replace(' ', '-')}" style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; ${getStatusStyles(request.adminApproval || 'Pendiente')}">${request.adminApproval || 'Pendiente'}</span>

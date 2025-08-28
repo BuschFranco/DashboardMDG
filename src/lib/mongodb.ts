@@ -88,6 +88,8 @@ export interface RequestDocument {
   planType: string;
   adminApproval: string;
   createdAt: Date;
+  Modify?: number | boolean; // Campo para determinar si es modificación o nuevo
+  modify?: number | boolean; // Campo alternativo en minúscula
   // Campos adicionales opcionales
   carriers?: string;
   flowType?: string;
