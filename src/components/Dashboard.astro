@@ -729,31 +729,32 @@
       // Initial load
       fetchRequests(1);
       
-      // Configurar modo Admin después de cargar los datos
-        setTimeout(() => {
-          setupAdminMode();
-        }, 500);
+      // Configurar modo Maxi después de cargar los datos
+      setTimeout(() => {
+        setupMaxiMode();
+      }, 500);
     });
 
-  // Función para configurar el modo Admin
-  function setupAdminMode() {
-    // Verificar si estamos en la página Admin por la URL
-    const isAdminPage = window.location.pathname.includes('/admin/');
+  // Función para configurar el modo Maxi
+  function setupMaxiMode() {
+    // Verificar si estamos en la página Maxi o Admin por la URL
+    const isMaxiPage = window.location.pathname.includes('/maxi/');
+    const isAdminPage = window.location.pathname.includes('/admin/') || window.isAdminMode;
     
-    if (isAdminPage) {
+    if (isMaxiPage || isAdminPage) {
       // Ocultar elementos estáticos y mostrar dropdowns
       const staticElements = document.querySelectorAll('.static-approval');
-      const adminElements = document.querySelectorAll('.admin-approval-select');
+      const maxiElements = document.querySelectorAll('.admin-approval-select');
       
       staticElements.forEach(el => {
         (el as HTMLElement).style.display = 'none';
       });
-      adminElements.forEach(el => {
+      maxiElements.forEach(el => {
         (el as HTMLElement).style.display = 'block';
       });
       
       // Agregar event listeners
-      adminElements.forEach((select, index) => {
+      maxiElements.forEach((select, index) => {
         select.addEventListener('change', (e) => {
           handleApprovalChange(e.target as HTMLSelectElement);
         });
@@ -765,25 +766,26 @@
 <script is:inline>
   // Script que se ejecuta en el cliente
   document.addEventListener('DOMContentLoaded', () => {
-    // Verificar si estamos en la página Admin
-    const isAdminPage = window.location.pathname.includes('/admin/');
+    // Verificar si estamos en la página Maxi o Admin
+    const isMaxiPage = window.location.pathname.includes('/maxi/');
+    const isAdminPage = window.location.pathname.includes('/admin/') || window.isAdminMode;
     
-    if (isAdminPage) {
-      // Configurar modo Admin después de un delay
+    if (isMaxiPage || isAdminPage) {
+      // Configurar modo Maxi después de un delay
       setTimeout(() => {
         const staticElements = document.querySelectorAll('.static-approval');
-        const adminElements = document.querySelectorAll('.admin-approval-select');
+        const maxiElements = document.querySelectorAll('.admin-approval-select');
         
         // Ocultar elementos estáticos y mostrar dropdowns
         staticElements.forEach(el => {
           el.style.display = 'none';
         });
-        adminElements.forEach(el => {
+        maxiElements.forEach(el => {
           el.style.display = 'block';
         });
         
         // Agregar event listeners
-        adminElements.forEach((select) => {
+        maxiElements.forEach((select) => {
           select.addEventListener('change', (e) => {
             // Aquí iría la lógica para actualizar la base de datos
           });

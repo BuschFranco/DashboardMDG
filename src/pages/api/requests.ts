@@ -9,7 +9,7 @@ export const GET: APIRoute = async ({ url }) => {
     const search = searchParams.get('search') || '';
     const country = searchParams.get('country') || '';
     const product = searchParams.get('product') || '';
-    const adminApproval = searchParams.get('adminApproval') || '';
+    const maxiApproval = searchParams.get('maxiApproval') || '';
     
     const collection = await getRequestsCollection();
     
@@ -33,8 +33,8 @@ export const GET: APIRoute = async ({ url }) => {
       filter.product = { $regex: product, $options: 'i' };
     }
     
-    if (adminApproval) {
-      filter.adminApproval = { $regex: adminApproval, $options: 'i' };
+    if (maxiApproval) {
+      filter.maxiApproval = { $regex: maxiApproval, $options: 'i' };
     }
     
     // Get total count for pagination
@@ -51,8 +51,8 @@ export const GET: APIRoute = async ({ url }) => {
     // Transform the data to match our interface
     const transformedRequests = requests.map((request: any) => {
       // Manejar tanto 'Modify' como 'modify' desde la base de datos
-       const modifyValue = request.Modify ?? request.modify ?? false;
-       const transformedModify = modifyValue === true || modifyValue === 'true' || modifyValue > 0;
+      const modifyValue = request.Modify ?? request.modify ?? false;
+      const transformedModify = modifyValue === true || modifyValue === 'true' || modifyValue > 0;
       
       return {
         devId: request.devId || 'N/A',

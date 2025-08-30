@@ -11,8 +11,13 @@ export const POST: APIRoute = async ({ request }) => {
     console.log('Extracted values:', { token: token ? '[PRESENT]' : '[MISSING]', requestId, newStatus });
     
     // Verificar token de autenticación
-    const ADMIN_TOKEN = process.env.ADMIN_APPROVAL_TOKEN || 'admin-secret-token-2024';
-    if (token !== ADMIN_TOKEN) {
+    const MAXI_TOKEN = process.env.MAXI_APPROVAL_TOKEN || 'maxi-secret-token-2024';
+    const ADMIN_TOKEN = process.env.ADMIN_APPROVAL_TOKEN || 'admin4tepuse';
+    
+    const isMaxiToken = token === MAXI_TOKEN;
+    const isAdminToken = token === ADMIN_TOKEN;
+    
+    if (!isMaxiToken && !isAdminToken) {
       console.log('Token validation failed');
       return new Response(JSON.stringify({ 
         success: false, 
@@ -70,13 +75,18 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Actualizar el documento
     console.log('Attempting to update document with ID:', requestId);
+    
+    // Determinar qué campo actualizar según el token
+    const updateField = isAdminToken ? 'adminApproval' : 'maxiApproval';
+    const updatedBy = isAdminToken ? 'Admin' : 'Maxi';
+    
     const result = await collection.updateOne(
       { _id: new ObjectId(requestId) },
       { 
         $set: { 
-          adminApproval: newStatus,
+          [updateField]: newStatus,
           updatedAt: new Date(),
-          updatedBy: 'Admin'
+          updatedBy: updatedBy
         } 
       }
     );
