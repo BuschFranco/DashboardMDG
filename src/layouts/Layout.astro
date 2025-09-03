@@ -292,6 +292,27 @@ const { title } = Astro.props;
     }
   }
 
+  /* Jira Link Styles */
+  .jira-link {
+    color: #0052cc !important;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: inline-block;
+  }
+
+  .jira-link:hover {
+    background-color: rgba(0, 82, 204, 0.1);
+    text-decoration: underline;
+    transform: translateY(-1px);
+  }
+
+  .jira-link:active {
+    transform: translateY(0);
+  }
+
   /* Loading Spinner */
   .loading {
     display: inline-block;
