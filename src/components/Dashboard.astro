@@ -465,7 +465,13 @@
         day: '2-digit'
       });
       
-      const statusClass = getStatusClass(request.adminApproval);
+      // Normalizar adminApproval para convertir PENDING a Pendiente
+      let normalizedApproval = request.adminApproval || 'Pendiente';
+      if (normalizedApproval === 'PENDING' || normalizedApproval === 'Pending' || normalizedApproval === 'undefined' || normalizedApproval === undefined) {
+        normalizedApproval = 'Pendiente';
+      }
+      
+      const statusClass = getStatusClass(normalizedApproval);
       
       const requestType = request.type || 'New';
       
@@ -483,19 +489,21 @@
           <td>
             ${requestType.toLowerCase() === 'saved' ? '' : `
             <!-- Versión estática (por defecto) -->
-            <span class="static-approval status-badge status-${(request.adminApproval || 'Pendiente').toLowerCase().replace(' ', '-')}" style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; ${getStatusStyles(request.adminApproval || 'Pendiente')}">${request.adminApproval || 'Pendiente'}</span>
+            <span class="static-approval status-badge status-${normalizedApproval.toLowerCase().replace(' ', '-')}" style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; ${getStatusStyles(normalizedApproval)}">${normalizedApproval}</span>
                         <!-- Versión dropdown (solo visible en modo Admin) -->
-                        <select class="admin-approval-select" data-request-id="${request._id}" data-current-status="${request.adminApproval || 'Pendiente'}" style="display: none;">
-                            <option value="Pendiente" ${(request.adminApproval || 'Pendiente') === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
-                            <option value="Aprobado" ${request.adminApproval === 'Aprobado' ? 'selected' : ''}>Aprobado</option>
-                            <option value="Rechazado" ${request.adminApproval === 'Rechazado' ? 'selected' : ''}>Rechazado</option>
+                        <select class="admin-approval-select" data-request-id="${request._id}" data-current-status="${normalizedApproval}" style="display: none;">
+                            <option value="Pendiente" ${normalizedApproval === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+                            <option value="Aprobado" ${normalizedApproval === 'Aprobado' ? 'selected' : ''}>Aprobado</option>
+                            <option value="Rechazado" ${normalizedApproval === 'Rechazado' ? 'selected' : ''}>Rechazado</option>
             </select>
             `}
           </td>
           <td>
-            ${request.jiraTaskKey ? 
-              `<span class="jira-key">${request.jiraTaskKey}</span>` : 
-              '<span style="color: var(--text-secondary);">N/A</span>'
+            ${request.jiraTaskKey && request.jiraTaskUrl ? 
+              `<a href="${request.jiraTaskUrl}" target="_blank" class="jira-link" style="color: #0052cc; text-decoration: none; font-weight: 500;">${request.jiraTaskKey}</a>` : 
+              request.jiraTaskKey ? 
+                `<span class="jira-key">${request.jiraTaskKey}</span>` :
+                '<span style="color: var(--text-secondary);">N/A</span>'
             }
           </td>
         </tr>

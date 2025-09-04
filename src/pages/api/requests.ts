@@ -69,12 +69,18 @@ export const GET: APIRoute = async ({ url }) => {
         requestType = transformedModify ? 'Modify' : 'New';
       }
       
+      // Normalizar el estado de adminApproval
+      let adminApproval = request.adminApproval || 'Pendiente';
+      if (adminApproval === 'PENDING' || adminApproval === 'Pending' || adminApproval === 'undefined' || adminApproval === undefined) {
+        adminApproval = 'Pendiente';
+      }
+      
       return {
         devId: request.devId || 'N/A',
         createdAt: request.createdAt || new Date(),
         requesterName: request.requesterName || 'N/A',
         requesterEmail: request.requesterEmail || request.requesterName || 'N/A',
-        adminApproval: request.adminApproval || 'Pendiente',
+        adminApproval: adminApproval,
         country: request.country || 'N/A',
         product: request.product || 'N/A',
         planType: request.planType || 'N/A',
