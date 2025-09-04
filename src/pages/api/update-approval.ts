@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { connectToDatabase } from '../../lib/mongodb';
+import { addCommentToJiraTask } from '../../lib/jira';
 import { ObjectId } from 'mongodb';
 
 export const POST: APIRoute = async ({ request }) => {
@@ -73,6 +74,20 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
+    // Buscar el documento antes de actualizarlo para obtener el jiraTaskKey
+    const existingRequest = await collection.findOne({ _id: new ObjectId(requestId) });
+    
+    if (!existingRequest) {
+      console.log('No document found with ID:', requestId);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Solicitud no encontrada' 
+      }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // Actualizar el documento
     console.log('Attempting to update document with ID:', requestId);
     
@@ -101,17 +116,32 @@ export const POST: APIRoute = async ({ request }) => {
       console.log('No document found with ID:', requestId);
       return new Response(JSON.stringify({ 
         success: false, 
-        error: 'Solicitud no encontrada' 
+        error: 'No se pudo actualizar la solicitud' 
       }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
+    // Si es aprobación de admin y el estado es "Aprobado" y existe una tarea de Jira, enviar comentario
+    let jiraCommentSent = false;
+    if (isAdminToken && newStatus === 'Aprobado' && existingRequest.jiraTaskKey) {
+      console.log('Sending Jira comment for task:', existingRequest.jiraTaskKey);
+      const commentText = "This comment is automatically generated upon creating the Jira task. The development request is in status: APPROVED.";
+      jiraCommentSent = await addCommentToJiraTask(existingRequest.jiraTaskKey, commentText);
+      
+      if (!jiraCommentSent) {
+        console.warn(`Failed to send Jira comment for task ${existingRequest.jiraTaskKey}`);
+      } else {
+        console.log('Jira comment sent successfully');
+      }
+    }
+
     console.log('Update successful');
     return new Response(JSON.stringify({ 
       success: true, 
-      message: 'Estado actualizado correctamente' 
+      message: 'Estado actualizado correctamente',
+      jiraCommentSent: jiraCommentSent
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

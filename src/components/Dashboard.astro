@@ -676,8 +676,14 @@
         // Actualizar el dataset con el nuevo estado
         selectElement.dataset.currentStatus = newStatus;
         
-        // Mostrar mensaje de éxito
-        alert(`Estado actualizado exitosamente a: ${newStatus}`);
+        // Mostrar mensaje de éxito con información de Jira si aplica
+        let successMessage = `Estado actualizado exitosamente a: ${newStatus}`;
+        if (result.jiraCommentSent && newStatus === 'Aprobado') {
+          successMessage += '\n\nSe ha enviado un comentario automático a la tarea de Jira.';
+        } else if (result.jiraCommentSent === false && newStatus === 'Aprobado') {
+          successMessage += '\n\nAdvertencia: No se pudo enviar el comentario a Jira.';
+        }
+        alert(successMessage);
         
         // Recargar la tabla para reflejar los cambios
         fetchRequests(currentPage);
