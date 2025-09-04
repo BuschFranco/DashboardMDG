@@ -81,6 +81,7 @@ export async function getRequestsCollection(): Promise<Collection> {
 export interface RequestDocument {
   devId: string;
   requesterName: string;
+  requesterEmail?: string;
   jiraTaskUrl: string;
   jiraTaskKey?: string;
   country: string;
@@ -88,8 +89,9 @@ export interface RequestDocument {
   planType: string;
   adminApproval: string;
   createdAt: Date;
-  Modify?: number | boolean; // Campo para determinar si es modificación o nuevo
-  modify?: number | boolean; // Campo alternativo en minúscula
+  type?: string; // Campo para determinar el tipo: "new" o "modify"
+  Modify?: number | boolean; // Campo para determinar si es modificación o nuevo (legacy)
+  modify?: number | boolean; // Campo alternativo en minúscula (legacy)
   // Campos adicionales opcionales
   carriers?: string;
   flowType?: string;

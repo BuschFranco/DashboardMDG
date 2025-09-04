@@ -19,7 +19,7 @@ export const GET: APIRoute = async ({ url }) => {
     if (search) {
       filter.$or = [
         { devId: { $regex: search, $options: 'i' } },
-        { requesterName: { $regex: search, $options: 'i' } },
+        { requesterEmail: { $regex: search, $options: 'i' } },
         { product: { $regex: search, $options: 'i' } },
         { country: { $regex: search, $options: 'i' } }
       ];
@@ -50,21 +50,38 @@ export const GET: APIRoute = async ({ url }) => {
     
     // Transform the data to match our interface
     const transformedRequests = requests.map((request: any) => {
-      // Manejar tanto 'Modify' como 'modify' desde la base de datos
-      const modifyValue = request.Modify ?? request.modify ?? false;
-      const transformedModify = modifyValue === true || modifyValue === 'true' || modifyValue > 0;
+      // Usar el campo 'type' de la base de datos, con fallback a lógica legacy
+      let requestType = 'New'; // Default
+      
+      if (request.type) {
+         // Si existe el campo 'type', usarlo directamente
+         if (request.type === 'modify') {
+           requestType = 'Modify';
+         } else if (request.type === 'saved') {
+           requestType = 'Saved';
+         } else {
+           requestType = 'New';
+         }
+       } else {
+        // Fallback a lógica legacy con campos Modify/modify
+        const modifyValue = request.Modify ?? request.modify ?? false;
+        const transformedModify = modifyValue === true || modifyValue === 'true' || modifyValue > 0;
+        requestType = transformedModify ? 'Modify' : 'New';
+      }
       
       return {
         devId: request.devId || 'N/A',
         createdAt: request.createdAt || new Date(),
         requesterName: request.requesterName || 'N/A',
+        requesterEmail: request.requesterEmail || request.requesterName || 'N/A',
         adminApproval: request.adminApproval || 'Pendiente',
         country: request.country || 'N/A',
         product: request.product || 'N/A',
         planType: request.planType || 'N/A',
         jiraTaskUrl: request.jiraTaskUrl || '',
         jiraTaskKey: request.jiraTaskKey || '',
-        Modify: transformedModify,
+        type: requestType,
+        Modify: requestType === 'Modify', // Mantener compatibilidad
         _id: request._id.toString()
       };
     });

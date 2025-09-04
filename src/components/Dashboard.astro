@@ -334,6 +334,12 @@
     border: 1px solid rgba(16, 185, 129, 0.2);
   }
 
+  .request-type.saved {
+    background: rgba(168, 85, 247, 0.1);
+    color: #7c3aed;
+    border: 1px solid rgba(168, 85, 247, 0.2);
+  }
+
   @media (max-width: 768px) {
     .dashboard-title {
       font-size: 2rem;
@@ -363,12 +369,14 @@
     devId: string;
     createdAt: string;
     requesterName: string;
+    requesterEmail: string;
     adminApproval: string;
     country: string;
     product: string;
     planType: string;
     jiraTaskUrl: string;
     jiraTaskKey: string;
+    type: string;
     Modify: boolean;
     _id: string;
   }
@@ -459,13 +467,13 @@
       
       const statusClass = getStatusClass(request.adminApproval);
       
-      const requestType = request.Modify ? 'Modify' : 'New';
+      const requestType = request.type || 'New';
       
       return `
         <tr>
           <td><span class="dev-id">${request.devId}</span></td>
           <td>${date}</td>
-          <td>${request.requesterName}</td>
+          <td>${request.requesterEmail}</td>
           <td>${request.country}</td>
           <td>${request.product}</td>
           <td>${request.planType}</td>
@@ -473,6 +481,7 @@
             <span class="request-type ${requestType.toLowerCase()}">${requestType}</span>
           </td>
           <td>
+            ${requestType.toLowerCase() === 'saved' ? '' : `
             <!-- Versión estática (por defecto) -->
             <span class="static-approval status-badge status-${(request.adminApproval || 'Pendiente').toLowerCase().replace(' ', '-')}" style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; ${getStatusStyles(request.adminApproval || 'Pendiente')}">${request.adminApproval || 'Pendiente'}</span>
                         <!-- Versión dropdown (solo visible en modo Admin) -->
@@ -481,6 +490,7 @@
                             <option value="Aprobado" ${request.adminApproval === 'Aprobado' ? 'selected' : ''}>Aprobado</option>
                             <option value="Rechazado" ${request.adminApproval === 'Rechazado' ? 'selected' : ''}>Rechazado</option>
             </select>
+            `}
           </td>
           <td>
             ${request.jiraTaskKey ? 
