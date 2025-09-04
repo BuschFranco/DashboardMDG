@@ -127,7 +127,7 @@ export const POST: APIRoute = async ({ request }) => {
     let jiraCommentSent = false;
     if (isAdminToken && newStatus === 'Aprobado' && existingRequest.jiraTaskKey) {
       console.log('Sending Jira comment for task:', existingRequest.jiraTaskKey);
-      const commentText = "This comment is automatically generated upon creating the Jira task. The development request is in status: APPROVED.";
+      const commentText = "This comment is automatically generated when the admin approved the request. The development request is in status: APPROVED.";
       jiraCommentSent = await addCommentToJiraTask(existingRequest.jiraTaskKey, commentText);
       
       if (!jiraCommentSent) {
