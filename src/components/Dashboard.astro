@@ -499,10 +499,8 @@
             `}
           </td>
           <td>
-            ${request.jiraTaskKey && request.jiraTaskUrl ? 
-              `<a href="${request.jiraTaskUrl}" target="_blank" class="jira-link" style="color: #0052cc; text-decoration: none; font-weight: 500;">${request.jiraTaskKey}</a>` : 
-              request.jiraTaskKey ? 
-                `<span class="jira-key">${request.jiraTaskKey}</span>` :
+            ${request.jiraTaskKey ? 
+              `<a href="${request.jiraTaskUrl || `https://mobisoft.atlassian.net/browse/${request.jiraTaskKey}`}" target="_blank" class="jira-link" style="color: #0052cc; text-decoration: none; font-weight: 500; border-bottom: 1px solid #0052cc;">${request.jiraTaskKey}</a>` : 
                 '<span style="color: var(--text-secondary);">N/A</span>'
             }
           </td>
