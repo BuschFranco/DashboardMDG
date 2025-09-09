@@ -676,11 +676,21 @@
         
         // Mostrar mensaje de éxito con información de Jira si aplica
         let successMessage = `Estado actualizado exitosamente a: ${newStatus}`;
-        if (result.jiraCommentSent && newStatus === 'Aprobado') {
-          successMessage += '\n\nSe ha enviado un comentario automático a la tarea de Jira.';
-        } else if (result.jiraCommentSent === false && newStatus === 'Aprobado') {
-          successMessage += '\n\nAdvertencia: No se pudo enviar el comentario a Jira.';
+        
+        if (newStatus === 'Aprobado') {
+          if (result.jiraStatusUpdated) {
+            successMessage += '\n\n✓ Estado de Jira actualizado a "Approved"';
+          } else {
+            successMessage += '\n\n⚠ No se pudo actualizar el estado de Jira';
+          }
         }
+        
+        if (result.jiraCommentSent) {
+          successMessage += '\n\n✓ Comentario automático enviado a Jira';
+        } else if (result.jiraCommentSent === false) {
+          successMessage += '\n\n⚠ No se pudo enviar el comentario a Jira';
+        }
+        
         alert(successMessage);
         
         // Recargar la tabla para reflejar los cambios

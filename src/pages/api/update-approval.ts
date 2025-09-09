@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
-import { connectToDatabase } from '../../lib/mongodb';
-import { addCommentToJiraTask } from '../../lib/jira';
+import { updateApprovalStatus, connectToDatabase } from '../../lib/mongodb';
+import { addCommentToJiraTask, updateJiraTaskStatus, getJiraTaskTransitions } from '../../lib/jira';
 import { ObjectId } from 'mongodb';
 
 export const POST: APIRoute = async ({ request }) => {
@@ -123,17 +123,42 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Si es aprobación de admin y el estado es "Aprobado" y existe una tarea de Jira, enviar comentario
+    // Si es aprobación de admin y existe una tarea de Jira, manejar cambios de estado y comentarios
     let jiraCommentSent = false;
-    if (isAdminToken && newStatus === 'Aprobado' && existingRequest.jiraTaskKey) {
-      console.log('Sending Jira comment for task:', existingRequest.jiraTaskKey);
-      const commentText = "This comment is automatically generated when the admin approved the request. The development request is in status: APPROVED.";
-      jiraCommentSent = await addCommentToJiraTask(existingRequest.jiraTaskKey, commentText);
+    let jiraStatusUpdated = false;
+    
+    if (isAdminToken && existingRequest.jiraTaskKey) {
+      console.log('Processing Jira updates for task:', existingRequest.jiraTaskKey);
       
-      if (!jiraCommentSent) {
-        console.warn(`Failed to send Jira comment for task ${existingRequest.jiraTaskKey}`);
-      } else {
+      if (newStatus === 'Aprobado') {
+        // Cambiar estado de Jira a "Approved"
+        jiraStatusUpdated = await updateJiraTaskStatus(existingRequest.jiraTaskKey, 'Approved');
+        
+        // Enviar comentario de aprobación
+        const commentText = "This comment is automatically generated upon creating the Jira task. The development request is in status: APPROVED.";
+        jiraCommentSent = await addCommentToJiraTask(existingRequest.jiraTaskKey, commentText);
+        
+      } else if (newStatus === 'Pendiente') {
+        // Enviar comentario de pendiente
+        const commentText = "Automatically generated message: The status of this task has returned to PENDING.";
+        jiraCommentSent = await addCommentToJiraTask(existingRequest.jiraTaskKey, commentText);
+        
+      } else if (newStatus === 'Rechazado') {
+        // Enviar comentario de rechazo
+        const commentText = "Automatically generated message: The status of this request is: REFUSED.";
+        jiraCommentSent = await addCommentToJiraTask(existingRequest.jiraTaskKey, commentText);
+      }
+      
+      if (jiraStatusUpdated) {
+        console.log('Jira status updated successfully');
+      } else if (newStatus === 'Aprobado') {
+        console.warn(`Failed to update Jira status for task ${existingRequest.jiraTaskKey}`);
+      }
+      
+      if (jiraCommentSent) {
         console.log('Jira comment sent successfully');
+      } else {
+        console.warn(`Failed to send Jira comment for task ${existingRequest.jiraTaskKey}`);
       }
     }
 
@@ -141,7 +166,8 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response(JSON.stringify({ 
       success: true, 
       message: 'Estado actualizado correctamente',
-      jiraCommentSent: jiraCommentSent
+      jiraCommentSent: jiraCommentSent,
+      jiraStatusUpdated: jiraStatusUpdated
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
