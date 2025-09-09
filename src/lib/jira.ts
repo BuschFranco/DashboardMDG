@@ -158,6 +158,20 @@ export async function updateJiraTaskStatus(taskKey: string, statusName: string):
           break;
         }
       }
+    } else if (statusName.toLowerCase() === 'waiting for approval') {
+      // Buscar variaciones comunes del estado 'Waiting for approval'
+      const waitingVariations = ['waiting', 'pending', 'review', 'approval', 'to do', 'todo', 'open', 'new'];
+      
+      for (const variation of waitingVariations) {
+        targetTransition = transitions.find(transition => 
+          transition.to.name.toLowerCase().includes(variation) ||
+          transition.name.toLowerCase().includes(variation)
+        );
+        if (targetTransition) {
+          console.log(`Found transition for 'Waiting for approval': ${targetTransition.name} -> ${targetTransition.to.name}`);
+          break;
+        }
+      }
     } else {
       targetTransition = transitions.find(transition => 
         transition.to.name.toLowerCase() === statusName.toLowerCase()

@@ -135,10 +135,13 @@ export const POST: APIRoute = async ({ request }) => {
         jiraStatusUpdated = await updateJiraTaskStatus(existingRequest.jiraTaskKey, 'Approved');
         
         // Enviar comentario de aprobación
-        const commentText = "This comment is automatically generated upon creating the Jira task. The development request is in status: APPROVED.";
+        const commentText = "Automatically generated message: The status of this task is: APPROVED";
         jiraCommentSent = await addCommentToJiraTask(existingRequest.jiraTaskKey, commentText);
         
       } else if (newStatus === 'Pendiente') {
+        // Cambiar estado de Jira a "Waiting for approval"
+        jiraStatusUpdated = await updateJiraTaskStatus(existingRequest.jiraTaskKey, 'Waiting for approval');
+        
         // Enviar comentario de pendiente
         const commentText = "Automatically generated message: The status of this task has returned to PENDING.";
         jiraCommentSent = await addCommentToJiraTask(existingRequest.jiraTaskKey, commentText);
@@ -151,7 +154,7 @@ export const POST: APIRoute = async ({ request }) => {
       
       if (jiraStatusUpdated) {
         console.log('Jira status updated successfully');
-      } else if (newStatus === 'Aprobado') {
+      } else if (newStatus === 'Aprobado' || newStatus === 'Pendiente') {
         console.warn(`Failed to update Jira status for task ${existingRequest.jiraTaskKey}`);
       }
       

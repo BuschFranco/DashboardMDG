@@ -683,6 +683,12 @@
           } else {
             successMessage += '\n\n⚠ No se pudo actualizar el estado de Jira';
           }
+        } else if (newStatus === 'Pendiente') {
+          if (result.jiraStatusUpdated) {
+            successMessage += '\n\n✓ Estado de Jira actualizado a "Waiting for approval"';
+          } else {
+            successMessage += '\n\n⚠ No se pudo actualizar el estado de Jira';
+          }
         }
         
         if (result.jiraCommentSent) {
