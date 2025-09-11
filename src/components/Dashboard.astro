@@ -82,6 +82,7 @@
             <th>Tipo</th>
             <th>Aprobación de Admin</th>
             <th>Jira Task</th>
+            <th>Acciones</th>
           </tr>
         </thead>
         <tbody id="tableBody">
@@ -362,6 +363,68 @@
       gap: 1rem;
     }
   }
+
+  /* Estilos para celda de acciones */
+  .actions-cell {
+    text-align: center;
+    vertical-align: middle;
+    padding: 0.75rem;
+  }
+
+  /* Estilos para botón de eliminación */
+  .delete-btn {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    color: white;
+    border: 1px solid #dc2626;
+    border-radius: 6px;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .delete-btn svg {
+    transition: all 0.2s ease;
+  }
+
+  .delete-btn:hover {
+    background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+    border-color: #b91c1c;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  }
+
+  .delete-btn:hover svg {
+    transform: scale(1.1);
+  }
+
+  .delete-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .delete-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+  }
+
+  .delete-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .delete-btn:disabled:hover {
+    transform: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
 </style>
 
 <script>
@@ -504,11 +567,21 @@
                 '<span style="color: var(--text-secondary);">N/A</span>'
             }
           </td>
+          <td class="actions-cell">
+            <button class="delete-btn admin-only" data-request-id="${request._id}" title="Eliminar registro" style="display: none;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M10 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </td>
         </tr>
       `;
     }).join('');
 
-    // No llamar setupAdminMode aquí, se llama en DOMContentLoaded
+    // Los botones de eliminación se configuran una sola vez en DOMContentLoaded
   }
 
   function getStatusClass(status: string): string {
@@ -770,6 +843,7 @@
       // Configurar modo Maxi después de cargar los datos
       setTimeout(() => {
         setupMaxiMode();
+        setupDeleteButtons();
       }, 500);
     });
 
@@ -791,6 +865,12 @@
         (el as HTMLElement).style.display = 'block';
       });
       
+      // Mostrar botones de eliminar solo en modo admin
+      const deleteButtons = document.querySelectorAll('.delete-btn.admin-only');
+      deleteButtons.forEach(btn => {
+        (btn as HTMLElement).style.display = 'flex';
+      });
+      
       // Agregar event listeners
       maxiElements.forEach((select, index) => {
         select.addEventListener('change', (e) => {
@@ -798,6 +878,55 @@
         });
       });
     }
+  }
+
+  // Función para configurar los botones de eliminación
+  function setupDeleteButtons() {
+    // Usar delegación de eventos para evitar múltiples event listeners
+    tableBodyEl.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+      
+      // Buscar el botón de eliminar más cercano (puede ser el target o un ancestro)
+      const deleteBtn = target.closest('.delete-btn') as HTMLElement;
+      
+      if (deleteBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const requestId = deleteBtn.getAttribute('data-request-id');
+        
+        if (confirm('¿Estás seguro de que quieres eliminar este registro? Esta acción no se puede deshacer.')) {
+          try {
+            // Deshabilitar el botón durante la operación
+            deleteBtn.style.opacity = '0.5';
+            deleteBtn.style.pointerEvents = 'none';
+            
+            const response = await fetch(`/api/delete-request?id=${requestId}`, {
+              method: 'DELETE'
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+              // Recargar la tabla después de eliminar
+              fetchRequests(currentPage);
+              alert('Registro eliminado correctamente');
+            } else {
+              alert(`Error: ${result.error}`);
+              // Rehabilitar el botón en caso de error
+              deleteBtn.style.opacity = '1';
+              deleteBtn.style.pointerEvents = 'auto';
+            }
+          } catch (error) {
+            console.error('Error al eliminar:', error);
+            alert('Error al eliminar el registro');
+            // Rehabilitar el botón en caso de error
+            deleteBtn.style.opacity = '1';
+            deleteBtn.style.pointerEvents = 'auto';
+          }
+        }
+      }
+    });
   }
 </script>
 
@@ -820,6 +949,12 @@
         });
         maxiElements.forEach(el => {
           el.style.display = 'block';
+        });
+        
+        // Mostrar botones de eliminar solo en modo admin
+        const deleteButtons = document.querySelectorAll('.delete-btn.admin-only');
+        deleteButtons.forEach(btn => {
+          btn.style.display = 'flex';
         });
         
         // Agregar event listeners
