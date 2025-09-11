@@ -9,32 +9,57 @@ export const GET: APIRoute = async ({ url }) => {
     const search = searchParams.get('search') || '';
     const country = searchParams.get('country') || '';
     const product = searchParams.get('product') || '';
-    const maxiApproval = searchParams.get('maxiApproval') || '';
+    const adminApproval = searchParams.get('adminApproval') || '';
     
     const collection = await getRequestsCollection();
     
     // Build filter object
     const filter: any = {};
+    const andConditions: any[] = [];
     
     if (search) {
-      filter.$or = [
-        { devId: { $regex: search, $options: 'i' } },
-        { requesterEmail: { $regex: search, $options: 'i' } },
-        { product: { $regex: search, $options: 'i' } },
-        { country: { $regex: search, $options: 'i' } }
-      ];
+      andConditions.push({
+        $or: [
+          { devId: { $regex: search, $options: 'i' } },
+          { requesterEmail: { $regex: search, $options: 'i' } },
+          { product: { $regex: search, $options: 'i' } },
+          { country: { $regex: search, $options: 'i' } }
+        ]
+      });
     }
     
     if (country) {
-      filter.country = { $regex: country, $options: 'i' };
+      andConditions.push({ country: { $regex: country, $options: 'i' } });
     }
     
     if (product) {
-      filter.product = { $regex: product, $options: 'i' };
+      andConditions.push({ product: { $regex: product, $options: 'i' } });
     }
     
-    if (maxiApproval) {
-      filter.maxiApproval = { $regex: maxiApproval, $options: 'i' };
+    if (adminApproval) {
+      if (adminApproval.toLowerCase() === 'pendiente') {
+        // Para "Pendiente", buscar múltiples variaciones incluyendo valores null/undefined
+        andConditions.push({
+          $or: [
+            { adminApproval: { $regex: 'pendiente', $options: 'i' } },
+            { adminApproval: { $regex: 'pending', $options: 'i' } },
+            { adminApproval: null },
+            { adminApproval: { $exists: false } },
+            { adminApproval: 'undefined' }
+          ]
+        });
+      } else {
+        andConditions.push({ adminApproval: { $regex: adminApproval, $options: 'i' } });
+      }
+    }
+    
+    // Combine all conditions with $and if there are multiple conditions
+    if (andConditions.length > 0) {
+      if (andConditions.length === 1) {
+        Object.assign(filter, andConditions[0]);
+      } else {
+        filter.$and = andConditions;
+      }
     }
     
     // Get total count for pagination
