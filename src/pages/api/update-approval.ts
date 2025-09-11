@@ -13,7 +13,7 @@ export const POST: APIRoute = async ({ request }) => {
     
     // Verificar token de autenticación
     const MAXI_TOKEN = process.env.MAXI_APPROVAL_TOKEN || 'maxi-secret-token-2024';
-    const ADMIN_TOKEN = process.env.ADMIN_APPROVAL_TOKEN || 'admin4tepuse';
+    const ADMIN_TOKEN = process.env.ADMIN_APPROVAL_TOKEN || '4444';
     
     const isMaxiToken = token === MAXI_TOKEN;
     const isAdminToken = token === ADMIN_TOKEN;

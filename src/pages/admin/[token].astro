@@ -3,7 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import Dashboard from '../../components/Dashboard.astro';
 
 const { token } = Astro.params;
-const ADMIN_TOKEN = process.env.ADMIN_APPROVAL_TOKEN || 'admin4tepuse';
+const ADMIN_TOKEN = process.env.ADMIN_APPROVAL_TOKEN || '4444';
 
 // Verificar si el token es válido
 const isValidToken = token === ADMIN_TOKEN;
