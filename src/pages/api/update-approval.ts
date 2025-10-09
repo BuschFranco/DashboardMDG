@@ -44,7 +44,7 @@ export const POST: APIRoute = async ({ request }) => {
     console.log('Required parameters validation passed');
 
     // Validar que el nuevo estado sea válido
-    const validStatuses = ['Aprobado', 'Pendiente', 'Rechazado', 'En Revisión'];
+    const validStatuses = ['Aprobado', 'Pendiente', 'Rechazado', 'En Revisión', 'Waiting for integration', 'DECLINED'];
     if (!validStatuses.includes(newStatus)) {
       return new Response(JSON.stringify({ 
         success: false, 
@@ -86,6 +86,29 @@ export const POST: APIRoute = async ({ request }) => {
         status: 404,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    // Validar reglas de transición entre estados (solo Admin)
+    if (isAdminToken) {
+      const currentAdminStatus: string = (existingRequest.adminApproval || '').toString();
+      const currentLower = currentAdminStatus.toLowerCase();
+      const newLower = newStatus.toLowerCase();
+
+      const isCurrentApproved = currentLower.includes('aprobado') || currentLower.includes('approved');
+      const isCurrentDeclined = currentLower.includes('rechazado') || currentLower.includes('declined') || currentLower.includes('rejected') || currentLower.includes('refused');
+
+      const isNewApproved = newLower.includes('aprobado') || newLower.includes('approved');
+      const isNewDeclined = newLower.includes('rechazado') || newLower.includes('declined') || newLower.includes('rejected') || newLower.includes('refused');
+
+      if ((isCurrentApproved && isNewDeclined) || (isCurrentDeclined && isNewApproved)) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Transición no permitida: no se puede cambiar de "APPROVED" a "DECLINED" ni de "DECLINED" a "APPROVED"'
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
     }
 
     // Actualizar el documento
@@ -138,17 +161,19 @@ export const POST: APIRoute = async ({ request }) => {
         const commentText = "Automatically generated message: The status of this task is: APPROVED";
         jiraCommentSent = await addCommentToJiraTask(existingRequest.jiraTaskKey, commentText);
         
-      } else if (newStatus === 'Pendiente') {
-        // Cambiar estado de Jira a "Waiting for approval"
-        jiraStatusUpdated = await updateJiraTaskStatus(existingRequest.jiraTaskKey, 'Waiting for approval');
+      } else if (newStatus === 'Pendiente' || newStatus === 'Waiting for integration') {
+        // Cambiar estado de Jira a "Waiting for integration"
+        jiraStatusUpdated = await updateJiraTaskStatus(existingRequest.jiraTaskKey, 'Waiting for integration');
         
-        // Enviar comentario de pendiente
-        const commentText = "Automatically generated message: The status of this task has returned to PENDING.";
+        // Enviar comentario de pendiente/integración
+        const commentText = "Automatically generated message: The status of this task is: WAITING FOR INTEGRATION.";
         jiraCommentSent = await addCommentToJiraTask(existingRequest.jiraTaskKey, commentText);
         
-      } else if (newStatus === 'Rechazado') {
+      } else if (newStatus === 'Rechazado' || newStatus === 'DECLINED') {
+        // Cambiar estado de Jira a "Declined"
+        jiraStatusUpdated = await updateJiraTaskStatus(existingRequest.jiraTaskKey, 'Declined');
         // Enviar comentario de rechazo
-        const commentText = "Automatically generated message: The status of this request is: REFUSED.";
+        const commentText = "Automatically generated message: The status of this request is: DECLINED.";
         jiraCommentSent = await addCommentToJiraTask(existingRequest.jiraTaskKey, commentText);
       }
       

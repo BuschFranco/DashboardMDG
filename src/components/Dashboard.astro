@@ -44,7 +44,7 @@
                             <select id="adminApproval" class="form-input">
           <option value="">Todos</option>
           <option value="Aprobado">Aprobado</option>
-          <option value="Pendiente">Pendiente</option>
+          <option value="Waiting for integration">Waiting for integration</option>
           <option value="Rechazado">Rechazado</option>
         </select>
       </div>
@@ -528,10 +528,16 @@
         day: '2-digit'
       });
       
-      // Normalizar adminApproval para convertir PENDING a Pendiente
-      let normalizedApproval = request.adminApproval || 'Pendiente';
-      if (normalizedApproval === 'PENDING' || normalizedApproval === 'Pending' || normalizedApproval === 'undefined' || normalizedApproval === undefined) {
-        normalizedApproval = 'Pendiente';
+      // Normalizar adminApproval a "Waiting for integration"
+      let normalizedApproval = request.adminApproval || 'Waiting for integration';
+      if (
+        normalizedApproval === 'PENDING' ||
+        normalizedApproval === 'Pending' ||
+        normalizedApproval === 'undefined' ||
+        normalizedApproval === undefined ||
+        normalizedApproval === 'Pendiente'
+      ) {
+        normalizedApproval = 'Waiting for integration';
       }
       
       const statusClass = getStatusClass(normalizedApproval);
@@ -555,10 +561,17 @@
             <span class="static-approval status-badge status-${normalizedApproval.toLowerCase().replace(' ', '-')}" style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; ${getStatusStyles(normalizedApproval)}">${normalizedApproval}</span>
                         <!-- Versión dropdown (solo visible en modo Admin) -->
                         <select class="admin-approval-select" data-request-id="${request._id}" data-current-status="${normalizedApproval}" style="display: none;">
-                            <option value="Pendiente" ${normalizedApproval === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
-                            <option value="Aprobado" ${normalizedApproval === 'Aprobado' ? 'selected' : ''}>Aprobado</option>
-                            <option value="Rechazado" ${normalizedApproval === 'Rechazado' ? 'selected' : ''}>Rechazado</option>
-            </select>
+                            ${(() => {
+                              const lower = normalizedApproval.toLowerCase();
+                              const isApproved = lower.includes('aprobado') || lower.includes('approved');
+                              const isDeclined = lower.includes('rechazado') || lower.includes('declined') || lower.includes('rejected') || lower.includes('refused');
+                              return `
+                                <option value="Waiting for integration" ${normalizedApproval === 'Waiting for integration' ? 'selected' : ''}>Waiting for integration</option>
+                                <option value="Aprobado" ${normalizedApproval === 'Aprobado' ? 'selected' : ''} ${isDeclined ? 'disabled' : ''}>Aprobado</option>
+                                <option value="Rechazado" ${normalizedApproval === 'Rechazado' ? 'selected' : ''} ${isApproved ? 'disabled' : ''}>Rechazado</option>
+                              `;
+                            })()}
+                        </select>
             `}
           </td>
           <td>
@@ -702,7 +715,24 @@
     const requestId = selectElement.dataset.requestId;
     const currentStatus = selectElement.dataset.currentStatus;
     const newStatus = selectElement.value;
-    
+
+    // Bloquear transiciones entre Approved y Declined
+    const normalizeStatus = (s: string | undefined) => (s || '').toLowerCase();
+    const isApproved = (s: string | undefined) => {
+      const sl = normalizeStatus(s);
+      return sl.includes('approved') || sl.includes('aprobado');
+    };
+    const isDeclined = (s: string | undefined) => {
+      const sl = normalizeStatus(s);
+      return sl.includes('declined') || sl.includes('rechazado') || sl.includes('rejected') || sl.includes('refused');
+    };
+
+    if ((isApproved(currentStatus) && isDeclined(newStatus)) || (isDeclined(currentStatus) && isApproved(newStatus))) {
+      alert('Transición no permitida: no se puede cambiar de "APPROVED" a "DECLINED" ni de "DECLINED" a "APPROVED".');
+      selectElement.value = currentStatus || selectElement.value; // Revertir selección
+      return;
+    }
+
     if (newStatus === currentStatus) {
       console.log('No change detected, returning');
       return; // No hay cambio
@@ -756,9 +786,9 @@
           } else {
             successMessage += '\n\n⚠ No se pudo actualizar el estado de Jira';
           }
-        } else if (newStatus === 'Pendiente') {
+        } else if (newStatus === 'Waiting for integration') {
           if (result.jiraStatusUpdated) {
-            successMessage += '\n\n✓ Estado de Jira actualizado a "Waiting for approval"';
+            successMessage += '\n\n✓ Estado de Jira actualizado a "Waiting for integration"';
           } else {
             successMessage += '\n\n⚠ No se pudo actualizar el estado de Jira';
           }

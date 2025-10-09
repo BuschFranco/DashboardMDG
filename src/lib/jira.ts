@@ -158,9 +158,9 @@ export async function updateJiraTaskStatus(taskKey: string, statusName: string):
           break;
         }
       }
-    } else if (statusName.toLowerCase() === 'waiting for approval') {
-      // Buscar variaciones comunes del estado 'Waiting for approval'
-      const waitingVariations = ['waiting', 'pending', 'review', 'approval', 'to do', 'todo', 'open', 'new'];
+    } else if (statusName.toLowerCase() === 'waiting for approval' || statusName.toLowerCase() === 'waiting for integration') {
+      // Buscar variaciones comunes del estado 'Waiting for approval' o 'Waiting for integration'
+      const waitingVariations = ['waiting', 'pending', 'review', 'approval', 'to do', 'todo', 'open', 'new', 'integration'];
       
       for (const variation of waitingVariations) {
         targetTransition = transitions.find(transition => 
@@ -168,7 +168,23 @@ export async function updateJiraTaskStatus(taskKey: string, statusName: string):
           transition.name.toLowerCase().includes(variation)
         );
         if (targetTransition) {
-          console.log(`Found transition for 'Waiting for approval': ${targetTransition.name} -> ${targetTransition.to.name}`);
+          console.log(`Found transition for '${statusName}': ${targetTransition.name} -> ${targetTransition.to.name}`);
+          break;
+        }
+      }
+    } else if (statusName.toLowerCase() === 'declined' || statusName.toLowerCase() === 'rejected' || statusName.toLowerCase() === 'refused') {
+      // Buscar variaciones comunes del estado 'Declined'
+      const declinedVariations = [
+        'declined', 'rejected', 'refused', "won't do", 'wont do', "won't fix", 'wont fix',
+        'cancelled', 'canceled', 'not done', 'closed'
+      ];
+      for (const variation of declinedVariations) {
+        targetTransition = transitions.find(transition =>
+          transition.to.name.toLowerCase().includes(variation) ||
+          transition.name.toLowerCase().includes(variation)
+        );
+        if (targetTransition) {
+          console.log(`Found transition for 'Declined': ${targetTransition.name} -> ${targetTransition.to.name}`);
           break;
         }
       }
