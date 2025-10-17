@@ -44,6 +44,7 @@
                             <select id="adminApproval" class="form-input">
           <option value="">Todos</option>
           <option value="Aprobado">Aprobado</option>
+          <option value="Waiting for approval">Waiting for approval</option>
           <option value="Waiting for integration">Waiting for integration</option>
           <option value="Rechazado">Rechazado</option>
         </select>
@@ -528,8 +529,8 @@
         day: '2-digit'
       });
       
-      // Normalizar adminApproval a "Waiting for integration"
-      let normalizedApproval = request.adminApproval || 'Waiting for integration';
+      // Normalizar adminApproval a "Waiting for approval"
+      let normalizedApproval = request.adminApproval || 'Waiting for approval';
       if (
         normalizedApproval === 'PENDING' ||
         normalizedApproval === 'Pending' ||
@@ -537,7 +538,7 @@
         normalizedApproval === undefined ||
         normalizedApproval === 'Pendiente'
       ) {
-        normalizedApproval = 'Waiting for integration';
+        normalizedApproval = 'Waiting for approval';
       }
       
       const statusClass = getStatusClass(normalizedApproval);
@@ -559,19 +560,21 @@
             ${requestType.toLowerCase() === 'saved' ? '' : `
             <!-- Versión estática (por defecto) -->
             <span class="static-approval status-badge status-${normalizedApproval.toLowerCase().replace(' ', '-')}" style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; ${getStatusStyles(normalizedApproval)}">${normalizedApproval}</span>
-                        <!-- Versión dropdown (solo visible en modo Admin) -->
-                        <select class="admin-approval-select" data-request-id="${request._id}" data-current-status="${normalizedApproval}" style="display: none;">
-                            ${(() => {
-                              const lower = normalizedApproval.toLowerCase();
-                              const isApproved = lower.includes('aprobado') || lower.includes('approved');
-                              const isDeclined = lower.includes('rechazado') || lower.includes('declined') || lower.includes('rejected') || lower.includes('refused');
-                              return `
-                                <option value="Waiting for integration" ${normalizedApproval === 'Waiting for integration' ? 'selected' : ''}>Waiting for integration</option>
-                                <option value="Aprobado" ${normalizedApproval === 'Aprobado' ? 'selected' : ''} ${isDeclined ? 'disabled' : ''}>Aprobado</option>
-                                <option value="Rechazado" ${normalizedApproval === 'Rechazado' ? 'selected' : ''} ${isApproved ? 'disabled' : ''}>Rechazado</option>
-                              `;
-                            })()}
-                        </select>
+                    <!-- Versión dropdown (solo visible en modo Admin) -->
+                    <select class="admin-approval-select" data-request-id="${request._id}" data-current-status="${normalizedApproval}" style="display: none;">
+                        ${(() => {
+                          const lower = normalizedApproval.toLowerCase();
+                          const isApproved = lower.includes('aprobado') || lower.includes('approved');
+                          const isDeclined = lower.includes('rechazado') || lower.includes('declined') || lower.includes('rejected') || lower.includes('refused');
+                          const isWaitingIntegration = lower.includes('waiting for integration') || lower.includes('waiting integration');
+                          return `
+                            <option value="Waiting for approval" ${normalizedApproval === 'Waiting for approval' ? 'selected' : ''}>Waiting for approval</option>
+                            <option value="Waiting for integration" ${normalizedApproval === 'Waiting for integration' ? 'selected' : ''} ${isApproved ? 'disabled' : ''}>Waiting for integration</option>
+                            <option value="Aprobado" ${normalizedApproval === 'Aprobado' ? 'selected' : ''} ${isDeclined ? 'disabled' : ''}>Aprobado</option>
+                            <option value="Rechazado" ${normalizedApproval === 'Rechazado' ? 'selected' : ''} ${isApproved || isWaitingIntegration ? 'disabled' : ''}>Rechazado</option>
+                          `;
+                        })()}
+                    </select>
             `}
           </td>
           <td>
@@ -726,9 +729,25 @@
       const sl = normalizeStatus(s);
       return sl.includes('declined') || sl.includes('rechazado') || sl.includes('rejected') || sl.includes('refused');
     };
+    const isWaitingIntegration = (s: string | undefined) => {
+      const sl = normalizeStatus(s);
+      return sl.includes('waiting for integration') || sl.includes('waiting integration');
+    };
 
     if ((isApproved(currentStatus) && isDeclined(newStatus)) || (isDeclined(currentStatus) && isApproved(newStatus))) {
       alert('Transición no permitida: no se puede cambiar de "APPROVED" a "DECLINED" ni de "DECLINED" a "APPROVED".');
+      selectElement.value = currentStatus || selectElement.value; // Revertir selección
+      return;
+    }
+
+    // Nuevas reglas: Approved -> Waiting for integration (bloqueado), Waiting for integration -> Declined (bloqueado)
+    if (isApproved(currentStatus) && isWaitingIntegration(newStatus)) {
+      alert('Transición no permitida: no se puede cambiar de "APPROVED" a "WAITING FOR INTEGRATION".');
+      selectElement.value = currentStatus || selectElement.value; // Revertir selección
+      return;
+    }
+    if (isWaitingIntegration(currentStatus) && isDeclined(newStatus)) {
+      alert('Transición no permitida: no se puede cambiar de "WAITING FOR INTEGRATION" a "DECLINED".');
       selectElement.value = currentStatus || selectElement.value; // Revertir selección
       return;
     }
@@ -784,9 +803,15 @@
           if (result.jiraStatusUpdated) {
             successMessage += '\n\n✓ Estado de Jira actualizado a "Approved"';
           } else {
+
+          }
+        } else if (newStatus === 'Waiting for approval') {
+          if (result.jiraStatusUpdated) {
+            successMessage += '\n\n✓ Estado de Jira actualizado a "Waiting for approval"';
+          } else {
             successMessage += '\n\n⚠ No se pudo actualizar el estado de Jira';
           }
-        } else if (newStatus === 'Waiting for integration') {
+        } else if (newStatus === 'Pendiente' || newStatus === 'Waiting for integration' || newStatus === 'Waiting integration') {
           if (result.jiraStatusUpdated) {
             successMessage += '\n\n✓ Estado de Jira actualizado a "Waiting for integration"';
           } else {

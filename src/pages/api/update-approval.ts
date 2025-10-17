@@ -44,16 +44,16 @@ export const POST: APIRoute = async ({ request }) => {
     console.log('Required parameters validation passed');
 
     // Validar que el nuevo estado sea válido
-    const validStatuses = ['Aprobado', 'Pendiente', 'Rechazado', 'En Revisión', 'Waiting for integration', 'DECLINED'];
+    const validStatuses = ['Aprobado', 'Pendiente', 'Rechazado', 'En Revisión', 'Waiting for approval', 'Waiting for integration', 'Waiting integration', 'DECLINED'];
     if (!validStatuses.includes(newStatus)) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Estado inválido. Debe ser: Aprobado, Pendiente, Rechazado o En Revisión' 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+       return new Response(JSON.stringify({ 
+         success: false, 
+         error: 'Estado inválido. Debe ser: Aprobado, Pendiente, Rechazado o En Revisión' 
+       }), {
+         status: 400,
+         headers: { 'Content-Type': 'application/json' }
+       });
+     }
 
     // Conectar a la base de datos
     console.log('Connecting to database...');
@@ -96,10 +96,35 @@ export const POST: APIRoute = async ({ request }) => {
 
       const isCurrentApproved = currentLower.includes('aprobado') || currentLower.includes('approved');
       const isCurrentDeclined = currentLower.includes('rechazado') || currentLower.includes('declined') || currentLower.includes('rejected') || currentLower.includes('refused');
+      const isCurrentWaitingIntegration = currentLower.includes('waiting for integration') || currentLower.includes('waiting integration') || currentLower.includes('pendiente');
 
       const isNewApproved = newLower.includes('aprobado') || newLower.includes('approved');
       const isNewDeclined = newLower.includes('rechazado') || newLower.includes('declined') || newLower.includes('rejected') || newLower.includes('refused');
+      const isNewWaitingIntegration = newLower.includes('waiting for integration') || newLower.includes('waiting integration') || newLower.includes('pendiente');
 
+      // Regla 1: si está en Approved no puede pasar a Waiting for integration
+      if (isCurrentApproved && isNewWaitingIntegration) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Transición no permitida: no se puede cambiar de "APPROVED" a "WAITING FOR INTEGRATION"'
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Regla 2: si está en Waiting for integration no puede pasar a Declined
+      if (isCurrentWaitingIntegration && isNewDeclined) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Transición no permitida: no se puede cambiar de "WAITING FOR INTEGRATION" a "DECLINED"'
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Regla 3 (ya existente): prohibir Approved <-> Declined
       if ((isCurrentApproved && isNewDeclined) || (isCurrentDeclined && isNewApproved)) {
         return new Response(JSON.stringify({
           success: false,
@@ -161,9 +186,21 @@ export const POST: APIRoute = async ({ request }) => {
         const commentText = "Automatically generated message: The status of this task is: APPROVED";
         jiraCommentSent = await addCommentToJiraTask(existingRequest.jiraTaskKey, commentText);
         
-      } else if (newStatus === 'Pendiente' || newStatus === 'Waiting for integration') {
-        // Cambiar estado de Jira a "Waiting for integration"
+      } else if (newStatus === 'Waiting for approval') {
+        // Cambiar estado de Jira a "Waiting for approval"
+        jiraStatusUpdated = await updateJiraTaskStatus(existingRequest.jiraTaskKey, 'Waiting for approval');
+
+        // Enviar comentario de espera de aprobación
+        const commentText = "Automatically generated message: The status of this task is: WAITING FOR APPROVAL.";
+        jiraCommentSent = await addCommentToJiraTask(existingRequest.jiraTaskKey, commentText);
+        
+      } else if (newStatus === 'Pendiente' || newStatus === 'Waiting for integration' || newStatus === 'Waiting integration') {
+        // Cambiar estado de Jira a "Waiting for integration" (con alias fallback)
         jiraStatusUpdated = await updateJiraTaskStatus(existingRequest.jiraTaskKey, 'Waiting for integration');
+        if (!jiraStatusUpdated) {
+          console.warn('Primary transition to "Waiting for integration" failed, trying "Waiting integration" alias');
+          jiraStatusUpdated = await updateJiraTaskStatus(existingRequest.jiraTaskKey, 'Waiting integration');
+        }
         
         // Enviar comentario de pendiente/integración
         const commentText = "Automatically generated message: The status of this task is: WAITING FOR INTEGRATION.";
@@ -179,36 +216,27 @@ export const POST: APIRoute = async ({ request }) => {
       
       if (jiraStatusUpdated) {
         console.log('Jira status updated successfully');
-      } else if (newStatus === 'Aprobado' || newStatus === 'Pendiente') {
-        console.warn(`Failed to update Jira status for task ${existingRequest.jiraTaskKey}`);
+      } else {
+        console.warn(`Failed to update Jira status for task ${existingRequest.jiraTaskKey} to ${newStatus}`);
       }
       
       if (jiraCommentSent) {
         console.log('Jira comment sent successfully');
       } else {
-        console.warn(`Failed to send Jira comment for task ${existingRequest.jiraTaskKey}`);
+        console.warn('Failed to send Jira comment');
       }
     }
 
-    console.log('Update successful');
     return new Response(JSON.stringify({ 
-      success: true, 
-      message: 'Estado actualizado correctamente',
-      jiraCommentSent: jiraCommentSent,
-      jiraStatusUpdated: jiraStatusUpdated
+      success: true,
+      jiraStatusUpdated, 
+      jiraCommentSent 
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-
   } catch (error) {
-    console.error('Error updating approval status:', error);
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Error interno del servidor' 
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    console.error('Error en API update-approval:', error);
+    return new Response(JSON.stringify({ success: false, error: 'Ocurrió un error al procesar la solicitud' }), { status: 500 });
   }
 };

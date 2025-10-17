@@ -23,13 +23,14 @@ export async function addCommentToJiraTask(taskKey: string, comment: string): Pr
       return false;
     }
 
-    if (!taskKey) {
-      console.error('No Jira task key provided');
+    if (!taskKey || !comment) {
+      console.error('No Jira task key or comment provided');
       return false;
     }
 
-    // Crear el comentario en formato Atlassian Document Format (ADF)
-    const commentBody: JiraComment = {
+    const auth = Buffer.from(`${jiraEmail}:${jiraApiToken}`).toString('base64');
+
+    const jiraComment: JiraComment = {
       body: {
         type: 'doc',
         version: 1,
@@ -39,18 +40,14 @@ export async function addCommentToJiraTask(taskKey: string, comment: string): Pr
             content: [
               {
                 type: 'text',
-                text: comment
-              }
-            ]
-          }
-        ]
-      }
+                text: comment,
+              },
+            ],
+          },
+        ],
+      },
     };
 
-    // Crear las credenciales de autenticación
-    const auth = Buffer.from(`${jiraEmail}:${jiraApiToken}`).toString('base64');
-
-    // Hacer la petición a la API de Jira
     const response = await fetch(`${jiraBaseUrl}/rest/api/3/issue/${taskKey}/comment`, {
       method: 'POST',
       headers: {
@@ -58,18 +55,17 @@ export async function addCommentToJiraTask(taskKey: string, comment: string): Pr
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(commentBody)
+      body: JSON.stringify(jiraComment)
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Failed to add comment to Jira task ${taskKey}:`, response.status, errorText);
+      console.error(`Failed to add comment to Jira task: ${response.status} ${response.statusText}`, errorText);
       return false;
     }
 
     console.log(`Successfully added comment to Jira task ${taskKey}`);
     return true;
-
   } catch (error) {
     console.error('Error adding comment to Jira task:', error);
     return false;
@@ -92,12 +88,9 @@ export async function getJiraTaskTransitions(taskKey: string): Promise<any[]> {
       return [];
     }
 
-    // Crear las credenciales de autenticación
     const auth = Buffer.from(`${jiraEmail}:${jiraApiToken}`).toString('base64');
 
-    const url = `${jiraBaseUrl}/rest/api/3/issue/${taskKey}/transitions`;
-    
-    const response = await fetch(url, {
+    const response = await fetch(`${jiraBaseUrl}/rest/api/3/issue/${taskKey}/transitions`, {
       method: 'GET',
       headers: {
         'Authorization': `Basic ${auth}`,
@@ -107,16 +100,14 @@ export async function getJiraTaskTransitions(taskKey: string): Promise<any[]> {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Failed to get Jira task transitions: ${response.status} ${response.statusText}`, errorText);
+      console.error(`Failed to fetch Jira task transitions: ${response.status} ${response.statusText}`, errorText);
       return [];
     }
 
     const data = await response.json();
-    console.log(`Available transitions for ${taskKey}:`, data.transitions);
     return data.transitions || [];
-
   } catch (error) {
-    console.error('Error getting Jira task transitions:', error);
+    console.error('Error fetching Jira task transitions:', error);
     return [];
   }
 }
@@ -139,64 +130,148 @@ export async function updateJiraTaskStatus(taskKey: string, statusName: string):
 
     // Primero obtener las transiciones disponibles
     const transitions = await getJiraTaskTransitions(taskKey);
+
+    // Normalizador y helpers locales
+    const normalize = (s: string) => s.trim().toLowerCase();
+    const toName = (t: any) => normalize(t.to?.name || '');
+    const statusLower = normalize(statusName);
+    const transName = (t: any) => (t?.name ? normalize(String(t.name)) : '');
     
     // Buscar la transición que corresponde al estado deseado
-    // Para 'Approved', intentar múltiples variaciones comunes
     let targetTransition;
     
-    if (statusName.toLowerCase() === 'approved') {
-      // Buscar variaciones comunes del estado 'Approved'
-      const approvedVariations = ['approved', 'done', 'resolved', 'closed', 'complete', 'finished'];
-      
-      for (const variation of approvedVariations) {
-        targetTransition = transitions.find(transition => 
-          transition.to.name.toLowerCase().includes(variation) ||
-          transition.name.toLowerCase().includes(variation)
-        );
-        if (targetTransition) {
-          console.log(`Found transition for 'Approved': ${targetTransition.name} -> ${targetTransition.to.name}`);
-          break;
-        }
-      }
-    } else if (statusName.toLowerCase() === 'waiting for approval' || statusName.toLowerCase() === 'waiting for integration') {
-      // Buscar variaciones comunes del estado 'Waiting for approval' o 'Waiting for integration'
-      const waitingVariations = ['waiting', 'pending', 'review', 'approval', 'to do', 'todo', 'open', 'new', 'integration'];
-      
-      for (const variation of waitingVariations) {
-        targetTransition = transitions.find(transition => 
-          transition.to.name.toLowerCase().includes(variation) ||
-          transition.name.toLowerCase().includes(variation)
-        );
-        if (targetTransition) {
-          console.log(`Found transition for '${statusName}': ${targetTransition.name} -> ${targetTransition.to.name}`);
-          break;
-        }
-      }
-    } else if (statusName.toLowerCase() === 'declined' || statusName.toLowerCase() === 'rejected' || statusName.toLowerCase() === 'refused') {
-      // Buscar variaciones comunes del estado 'Declined'
-      const declinedVariations = [
-        'declined', 'rejected', 'refused', "won't do", 'wont do', "won't fix", 'wont fix',
-        'cancelled', 'canceled', 'not done', 'closed'
+    if (statusLower === 'approved') {
+      // Estados/variaciones típicos (inglés y español) para "Aprobado"
+      const approvedExactTargets = [
+        'approved', 'aprobado', 'aprobada',
+        'done', 'resolved', 'closed', 'complete', 'completed', 'finished',
+        'resuelto', 'resuelta', 'cerrado', 'cerrada', 'hecho', 'terminado', 'finalizado', 'finalizada', 'completado', 'completada', 'listo'
       ];
-      for (const variation of declinedVariations) {
-        targetTransition = transitions.find(transition =>
-          transition.to.name.toLowerCase().includes(variation) ||
-          transition.name.toLowerCase().includes(variation)
-        );
-        if (targetTransition) {
-          console.log(`Found transition for 'Declined': ${targetTransition.name} -> ${targetTransition.to.name}`);
-          break;
-        }
+
+      // 1) Match exacto por nombre del estado destino (to.name)
+      targetTransition = transitions.find(t => approvedExactTargets.includes(toName(t)));
+
+      // 2) Si no hay exacto, buscar por tokens en to.name o en el nombre de transición
+      if (!targetTransition) {
+        const approvedTokens = [
+          'approved', 'approve', 'aprob', // cubrir "approve", "aprobar", "aprobación"
+          'done', 'resolved', 'closed', 'complete', 'finished',
+          'resuelt', 'cerrad', 'hech', 'termin', 'finaliz', 'complet', 'list'
+        ];
+        targetTransition = transitions.find(t => {
+          const tn = toName(t);
+          const trn = transName(t);
+          return approvedTokens.some(tok => tn.includes(tok) || trn.includes(tok));
+        });
+      }
+
+      if (targetTransition) {
+        console.log(`Found transition for 'Approved': ${transitionName(targetTransition)} -> ${toName(targetTransition)}`);
+      }
+    } else if (
+      statusLower === 'waiting for approval' ||
+      statusLower === 'waiting approval' ||
+      statusLower === 'waiting for approved' ||
+      statusLower === 'waiting approved'
+    ) {
+      // Mapear específicamente a estados de "espera de aprobación" evitando saltar a 'Approved'
+      const exactApprovalTargets = [
+        'waiting for approval',
+        'awaiting approval',
+        'pending approval',
+        'approval pending',
+        'in approval',
+        'under approval',
+        'in review',
+        'under review',
+        'awaiting review'
+      ];
+
+      targetTransition = transitions.find(t => exactApprovalTargets.includes(toName(t)));
+
+      if (!targetTransition) {
+        // Búsqueda por includes en el nombre del estado destino (NO usar el nombre de la transición)
+        const approvalTokens = ['waiting for approval', 'awaiting approval', 'pending approval', 'approval', 'review', 'awaiting', 'pending'];
+        const excludeApprovedTokens = ['approved', 'approve'];
+        targetTransition = transitions.find(t => {
+          const tn = toName(t);
+          return approvalTokens.some(tok => tn.includes(tok)) && !excludeApprovedTokens.some(ex => tn.includes(ex));
+        });
+      }
+
+      if (targetTransition) {
+        console.log(`Found transition for '${statusName}': ${transitionName(targetTransition)} -> ${toName(targetTransition)}`);
+      }
+    } else if (
+      statusLower === 'waiting for integration' ||
+      statusLower === 'waiting integration'
+    ) {
+      // Mapear específicamente a estados de "espera de integración"
+      const exactIntegrationTargets = [
+        'waiting for integration',
+        'awaiting integration',
+        'pending integration',
+        'integration pending',
+        'ready for integration',
+        'ready to integrate',
+        'ready for merge',
+        'ready to merge',
+        'merge ready'
+      ];
+
+      targetTransition = transitions.find(t => exactIntegrationTargets.includes(toName(t)));
+
+      if (!targetTransition) {
+        const integrationTokens = ['waiting for integration', 'awaiting integration', 'pending integration', 'integration', 'integrat', 'merge'];
+        targetTransition = transitions.find(t => integrationTokens.some(tok => toName(t).includes(tok)));
+      }
+
+      if (targetTransition) {
+        console.log(`Found transition for '${statusName}': ${transitionName(targetTransition)} -> ${toName(targetTransition)}`);
+      }
+    } else if (statusLower === 'declined' || statusLower === 'rejected' || statusLower === 'refused') {
+      // Estados/variaciones típicos (inglés y español) para "Rechazado"
+      const declinedExactTargets = [
+        'declined', 'rejected', 'refused',
+        'rechazado', 'rechazada',
+        'cancelled', 'canceled', 'cancelado', 'cancelada',
+        "won't do", 'wont do', "won't fix", 'wont fix',
+        'not done', 'no hecho',
+        'closed', 'cerrado', 'cerrada'
+      ];
+
+      // 1) Match exacto por estado destino
+      targetTransition = transitions.find(t => declinedExactTargets.includes(toName(t)));
+
+      // 2) Si no hay exacto, usar tokens en to.name o transition.name
+      if (!targetTransition) {
+        const declinedTokens = [
+          'declin', 'reject', 'refus',
+          'rechaz', 'deneg', // rechazar, denegar
+          'cancel', 'cancelar', 'cancela',
+          "won't do", 'wont do', "won't fix", 'wont fix',
+          'not done', 'no hecho',
+          'close', 'cerrar', 'cerrad'
+        ];
+        targetTransition = transitions.find(t => {
+          const tn = toName(t);
+          const trn = transName(t);
+          return declinedTokens.some(tok => tn.includes(tok) || trn.includes(tok));
+        });
+      }
+
+      if (targetTransition) {
+        console.log(`Found transition for 'Declined': ${transitionName(targetTransition)} -> ${toName(targetTransition)}`);
       }
     } else {
       targetTransition = transitions.find(transition => 
-        transition.to.name.toLowerCase() === statusName.toLowerCase()
+        toName(transition) === statusLower
       );
     }
 
     if (!targetTransition) {
       console.error(`No transition found for status '${statusName}' in task ${taskKey}`);
-      console.log('Available transitions:', transitions.map(t => `${t.id}: ${t.name} -> ${t.to.name}`));
+      console.log('Available transitions:', transitions.map(t => `${t.id}: ${transitionName(t)} -> ${toName(t)}`));
       return false;
     }
 
@@ -234,6 +309,10 @@ export async function updateJiraTaskStatus(taskKey: string, statusName: string):
   }
 }
 
+function transitionName(t: any): string {
+  return (t?.name ? String(t.name) : '').trim();
+}
+
 export async function validateJiraTaskExists(taskKey: string): Promise<boolean> {
   try {
     const jiraBaseUrl = process.env.JIRA_BASE_URL;
@@ -254,10 +333,13 @@ export async function validateJiraTaskExists(taskKey: string): Promise<boolean> 
       }
     });
 
-    return response.ok;
+    if (!response.ok) {
+      return false;
+    }
 
+    const data = await response.json();
+    return Boolean(data && data.key);
   } catch (error) {
-    console.error('Error validating Jira task:', error);
     return false;
   }
 }

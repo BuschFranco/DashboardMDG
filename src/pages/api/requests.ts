@@ -37,13 +37,15 @@ export const GET: APIRoute = async ({ url }) => {
     }
     
     if (adminApproval) {
-      if (adminApproval.toLowerCase() === 'pendiente' || adminApproval.toLowerCase() === 'waiting for integration') {
-        // Para "Pendiente", buscar múltiples variaciones incluyendo valores null/undefined
+      const adminLower = adminApproval.toLowerCase();
+      if (adminLower === 'pendiente' || adminLower === 'waiting for approval' || adminLower === 'waiting integration') {
+        // Para estados de espera (Pendiente / Waiting for approval / Waiting integration), buscar múltiples variaciones incluyendo valores null/undefined
         andConditions.push({
           $or: [
             { adminApproval: { $regex: 'pendiente', $options: 'i' } },
             { adminApproval: { $regex: 'pending', $options: 'i' } },
-            { adminApproval: { $regex: 'waiting for integration', $options: 'i' } },
+            { adminApproval: { $regex: 'waiting for approval', $options: 'i' } },
+            { adminApproval: { $regex: 'waiting integration', $options: 'i' } },
             { adminApproval: null },
             { adminApproval: { $exists: false } },
             { adminApproval: 'undefined' }
@@ -96,9 +98,9 @@ export const GET: APIRoute = async ({ url }) => {
       }
       
       // Normalizar el estado de adminApproval
-      let adminApproval = request.adminApproval || 'Waiting for integration';
+      let adminApproval = request.adminApproval || 'Waiting for approval';
       if (adminApproval === 'PENDING' || adminApproval === 'Pending' || adminApproval === 'undefined' || adminApproval === undefined || adminApproval === 'Pendiente') {
-        adminApproval = 'Waiting for integration';
+        adminApproval = 'Waiting for approval';
       }
       
       return {
